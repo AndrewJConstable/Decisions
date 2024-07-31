@@ -1,0 +1,116 @@
+---
+title: "Unpacking climate governance in relation to climate risk"
+author: "Andrew Constable"
+date: "2024-07-31"
+output: bookdown::pdf_document2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(bookdown)
+library(ggplot2)
+library(viridis)
+```
+
+This document relates climate risks to costs (and, consequently, benefits) of interest to governance. 
+
+## Introduction  
+
+Risk is usually defined as the product of the probability of an event and the consequences of the event.  It is a relative index used to judge the relative importance of events.  However, to be useful, the index needs to be made consistent.  The probability of an event relates specifically to the type and magnitude of a hazard while the consequences (impacts) relate to the costs when a hazard occurs.  Such costs are often determined in dollars but could be determined as other continuous (or pseudo-continuous) metrics.  Impacts arise from the degree of exposure to the hazard and/or subsequent perturbations caused by the hazard (cascading and compounding effects), the vulnerabilities to being affected by exposures, and the potential for responses to create their own consequences/costs.  General use of the term 'risk' can create confusion when trying to understand the links between hazards and costs. 
+  
+There are a multitude (network, cascade) of pathways between a hazard and ultimate impacts.  From a governance perspective, the aim is to minimise the overall costs of the portfolio of hazards - costs of mitigation and preparation (let's call these the preparatory or input costs) plus costs of response and recovery to the impacts (resilience or output costs).  Resilience costs are the result of residual risks, which are the risks remaining after interventions to reduce hazards, exposures and vulnerabilities, combined with the preparation for managing impacts, i.e. preparing for response and recovery. Preparatory costs are the interventions and preparation prior to impact.  Successful governance manages the total costs of mitigation and preparation (inputs) and response and recovery (outputs) across all hazards, which includes being aware of and managing positive and negative interactions between interventions.  However, entities in governance need only be concerned with inputs and outputs at the scale of their interest.  For example, the federal government may only require an understanding of the financial costs of inputs and outputs to achieve an optimal solution, compared to a local business that will need to know how interventions will be implemented (people, skill, materials, social management etc.) in protecting their interests.  
+  
+Decision-making is not straight forward because of the social dimension and attitudes of individual actors within entities.  This is treated as an aside in the following illustration but will need to be made central in understanding the strengths of interactions between governance entities.
+
+This document aims to illustrate how to advance beyond consideration of risks to the issues of governance relating to costs and benefits, neither of which need to be measured solely as monetary.  It is divided into four sections:  
+  
+i) Analytical pathways converting hazards to residual risks,  
+i) Reframing risk management as costs,    
+i) Integrating governance across a portfolio of hazards, and  
+i) Important issues for further consideration.  
+  
+### Illustrative example  
+  
+Flooding is topical and a tangible climate threat.  Water flows in Australia are dictated by average daily rainfall along with storms (quantity and duration of downpour) that result in raised river levels.  The instantenous volume of water carried by the river is a hazard.  Exposure of some factor of interest, e.g. dwellings, will be determined by the height of the river given that instantaneous volume of water.  Such exposures are now readily mapped using geographic information systems.  Exposure may be moderated through the building of levee banks around the dwellings.  Such levee banks would be regarded as adaptations.  They may also be maladaptations if they displace the water and expose other areas that would have otherwise been safe.  Should dwellings be exposed, they may be made less vulnerable to impacts if they were built on stilts to keep parts of the dwelling above the water.  Given that levee banks may be breached, safety of the dwellings will be dependent on the likelihood of such breaches, either through failure of the bank or from the volume of water exceeding that which can be excluded by the bank.
+Should a dwelling be flooded, costs may include loss of life, belongings and/or dwelling depending on the response, and recovery will depend on household wealth, insurance and available support and services.  Further, response and recovery may be impacted by other impacts of the flood, such as road infrastructure, utilities, and scale of impact on the community.  
+  
+This example is used for framing the illustrative calculations and graphs in this paper.  
+  
+## Analytical pathways converting hazards to residual risks  
+  
+### Hazards  
+
+Floods are often talked about as 1 in 10 year, 1 in 100 year, 1 in 1000 year floods.  These expressions are often based on experience, assuming a world is unchanging in geological time.  However, they are expected to reflect probabilities of occurrence, i.e. how often the maximum river height in a year may occur over hundreds of years (Figure \@ref(fig:WaterHeightPdf)).  People will be used to regular river heights around the median, indicated by the mode in the figure, and their planning will take this into account.  Greater than 1 in 30 year floods are generational in experience, and often deemed 'unlucky'.  For assessing risk, the relevant probability for a given river height is the probability that the annual maximum height is greater than or equal to the relevant height.  
+ 
+  
+```{r WaterHeightPdf, fig.cap="Probability density function for annual maximum river height, showing floods colloquially termed 1 in 10, 100 and 1000 year floods",echo=FALSE}
+wHeight<-seq(0.01,25,0.01)
+wPD<-dlnorm(wHeight,0,1)
+wPD<-wPD/sum(wPD)
+dfW<-data.frame(Height=wHeight,PD=wPD)
+
+p<-ggplot(dfW, aes(x=Height,y=PD))+geom_line()
+p<-p+geom_vline(xintercept=qlnorm(c(0.9,0.99,0.999),0,1), linetype="dashed", color="black", linewidth=0.5)
+p<-p+annotate(geom = "text", x = qlnorm(c(0.9,0.99,0.999),0,1)-0.5, y = 0.005, label = c("1 in 10 years","1 in 100 years","1 in 1000 years"), color = "black",
+             angle = 90)
+p<-p+labs(x="Maximum river height in a given year", y="Relative frequency over years")
+p
+```
+  
+Under climate scenarios considered by the IPCC, catchments may experience two kinds of changes in their flood regimes - increase in the median annual maximum river height, and/or increase in the likelihood of very high maxima (spread). Figure \@ref(fig:ClimateWaterHeightProb) illustrates how annual maximum river height may change for 1 in 10 year floods (scale of river height is illustrative, i.e. not based on projections).  This illustrates a dynamic nature of the probability of hazardous events.  
+  
+```{r ClimateWaterHeightProb, fig.cap="xxx",echo=FALSE}
+wHtBaseMed<-0
+wHtBaseSD <-1
+dCCmed_p_decade<-0.1
+dCCSD_p_decade<-0.
+nYrs<-100
+
+hts<-seq(0,30,0.1)
+df<-do.call(rbind,lapply(seq(0,nYrs,1),function(t,med,sd,dmed,dsd,q){
+    ymed<-med+t/10*dmed
+    ysd<-sd+t/10*dsd
+    return(data.frame(x=rep(t,length(q)),y=q,z=(1-plnorm(q,ymed,ysd))))
+      },wHtBaseMed,wHtBaseSD,dCCmed_p_decade,dCCSD_p_decade,hts))
+# df$z[df$z<0.005]<-NA
+
+p <-ggplot(df,aes(x=x,y=y,fill=z))+
+  geom_tile() + #height=1.1,width=1.1) + 
+#  scale_fill_viridis(name="Hazard Probability",option ="C",begin=0.25,end=0.75)
+   scale_fill_gradientn(colours=c("blue","white","red"),values=c(0,0.1,1))
+#p <-p + scale_y_continuous(trans = "reverse", breaks = unique(df$y))
+p <-p + scale_x_continuous(breaks =seq(0,nYrs,10))
+p <-p + theme_minimal(base_size = 8)
+p <-p + labs(title= "Hazard probability", x="Year", y="River height")
+p <-p + theme(legend.position = "right")+
+  theme(plot.title=element_text(size = 14))+
+  theme(axis.text.y=element_text(size=6)) +
+  theme(strip.background = element_rect(colour="white"))+
+  theme(plot.title=element_text(hjust=0))+
+  theme(axis.ticks=element_blank())+
+  theme(axis.text=element_text(size=7))+
+  theme(legend.title=element_text(size=8))+
+  theme(legend.text=element_text(size=6))
+#  removeGrid()#ggExtra
+ p
+```
+  
+### Exposure    
+  
+
+    
+## Reframing risk management as costs  
+  
+  
+### Integrating across risks arising from a single hazard  
+  
+  
+## Integrating governance across a portfolio of hazards  
+  
+## Important issues for further consideration  
+  
+### Attitude to risk  
+  
+Risk rejection, tolerance, aversion, avoidance  
+plot how this would look given levels of hazard  
+

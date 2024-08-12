@@ -31,16 +31,19 @@ i) Important issues for further consideration.
   
 ### Illustrative example  
   
-Flooding is topical and a tangible climate threat.  Water flows in Australia are dictated by average daily rainfall along with storms (quantity and duration of downpour) that result in raised river levels.  The instantenous volume of water carried by the river is a hazard.  Exposure of some factor of interest, e.g. dwellings, will be determined by the height of the river given that instantaneous volume of water.  Such exposures are now readily mapped using geographic information systems.  Exposure may be moderated through the building of levee banks around the dwellings.  Such levee banks would be regarded as adaptations.  They may also be maladaptations if they displace the water and expose other areas that would have otherwise been safe.  Should dwellings be exposed, they may be made less vulnerable to impacts if they were built on stilts to keep parts of the dwelling above the water.  Given that levee banks may be breached, safety of the dwellings will be dependent on the likelihood of such breaches, either through failure of the bank or from the volume of water exceeding that which can be excluded by the bank.
-Should a dwelling be flooded, costs may include loss of life, belongings and/or dwelling depending on the response, and recovery will depend on household wealth, insurance and available support and services.  Further, response and recovery may be impacted by other impacts of the flood, such as road infrastructure, utilities, and scale of impact on the community.  
+The following example is used for framing the illustrative calculations and graphs in this paper.  
   
-This example is used for framing the illustrative calculations and graphs in this paper.  
+Flooding is topical and a tangible climate threat.  Water flows in Australia are dictated by average daily rainfall along with storms (quantity and duration of downpour) that result in increased free-flowing water in catchments. The instantenous volume of water carried by the river is a hazard.  Exposure of some factor or asset of interest, e.g. dwellings, will be determined by the height of the river given the instantaneous volume of water.  Such exposures are now readily mapped using geographic information systems.  Exposure may be moderated through the building dams downstream of common heavy rainfall events, the building of levee banks around assets.  Such levee banks would be regarded as adaptations.  They may also be maladaptations if they displace the water and expose other areas that would have otherwise been safe.  Given that levee banks may be breached, safety of the dwellings will be dependent on the likelihood of such breaches, either through failure of the bank or from the volume of water exceeding that which can be excluded by the bank.  
+  
+Should dwellings be exposed, they may be made less vulnerable to impacts if they were built on stilts to keep parts of the dwelling above the water.  Should a dwelling be flooded, costs may include loss of life, belongings and/or dwelling depending on the response, and recovery will depend on household wealth, insurance and available support and services.  Further, response and recovery may be impacted by other impacts of the flood, such as road infrastructure, utilities, and scale of impact on the community.  
+  
+Thus, from a governance perspective, the probability of events is in managing hazards and exposure, while the impacts are more contingent on vulnerability, response and recovery.  Moreover, the concept of cascading risks is more relate to how direct impacts (vulnerability) affect other more distally-related assets, services or some other factors.  
   
 ## Analytical pathways converting hazards to residual risks  
   
 ### Hazards  
 
-Floods are often talked about as 1 in 10 year, 1 in 100 year, 1 in 1000 year floods.  These expressions are often based on experience, assuming a world is unchanging in geological time.  However, they are expected to reflect probabilities of occurrence, i.e. how often the maximum river height in a year may occur over hundreds of years (Figure \@ref(fig:WaterHeightPdf)).  People will be used to regular river heights around the median, indicated by the mode in the figure, and their planning will take this into account.  Greater than 1 in 30 year floods are generational in experience, and often deemed 'unlucky'.  For assessing risk, the relevant probability for a given river height is the probability that the annual maximum height is greater than or equal to the relevant height.  
+Floods are often talked about as 1 in 10 year, 1 in 100 year, 1 in 1000 year floods.  These expressions are often based on experience, assuming a world is unchanging in geological time.  However, they are expected to reflect probabilities of occurrence, i.e. how often the maximum river height in a year may occur over hundreds of years (Figure \@ref(fig:WaterHeightPdf)).  People will be used to regular river flows around the median annual maximum rainfall events, indicated by the mode in the figure, and their planning will take this into account.  Greater than 1 in 30 year floods are generational in experience.  For assessing risk, the relevant probability of a prolonged storm (translated to river height) is the probability that the annual maximum flow is equal to or exceeds a relevant river flow/height.  
  
   
 ```{r WaterHeightPdf, fig.cap="Probability density function for annual maximum river height, showing floods colloquially termed 1 in 10, 100 and 1000 year floods",echo=FALSE}
@@ -55,6 +58,8 @@ p<-p+annotate(geom = "text", x = qlnorm(c(0.9,0.99,0.999),0,1)-0.5, y = 0.005, l
              angle = 90)
 p<-p+labs(x="Maximum river height in a given year", y="Relative frequency over years")
 p
+
+# ggsave("WaterHeightPdf.pdf", p)
 ```
   
 Under climate scenarios considered by the IPCC, catchments may experience two kinds of changes in their flood regimes - increase in the median annual maximum river height, and/or increase in the likelihood of very high maxima (spread). Figure \@ref(fig:ClimateWaterHeightProb) illustrates how annual maximum river height may change for 1 in 10 year floods (scale of river height is illustrative, i.e. not based on projections).  This illustrates a dynamic nature of the probability of hazardous events.  
@@ -62,26 +67,32 @@ Under climate scenarios considered by the IPCC, catchments may experience two ki
 ```{r ClimateWaterHeightProb, fig.cap="xxx",echo=FALSE}
 wHtBaseMed<-0
 wHtBaseSD <-1
-dCCmed_p_decade<-0.1
+dCCmed_p_decade<-0.14
 dCCSD_p_decade<-0.
 nYrs<-100
+maxHeight<-30
+HeightInterval<-0.1
 
-hts<-seq(0,30,0.1)
-df<-do.call(rbind,lapply(seq(0,nYrs,1),function(t,med,sd,dmed,dsd,q){
+hts<-seq(0,maxHeight,HeightInterval)
+df_H<-do.call(rbind,lapply(seq(0,nYrs,1),function(t,med,sd,dmed,dsd,q,htint){
     ymed<-med+t/10*dmed
     ysd<-sd+t/10*dsd
-    return(data.frame(x=rep(t,length(q)),y=q,z=(1-plnorm(q,ymed,ysd))))
-      },wHtBaseMed,wHtBaseSD,dCCmed_p_decade,dCCSD_p_decade,hts))
+    Hlo<-q-htint/2
+    Hhi<-q+htint/2
+    pHlo<-plnorm(Hlo,ymed,ysd)
+    pHhi<-plnorm(Hhi,ymed,ysd)
+    
+    return(data.frame(x=rep(t,length(q)),y=q,z=(1-plnorm(q,ymed,ysd)),pEvent=(pHhi-pHlo)))
+      },wHtBaseMed,wHtBaseSD,dCCmed_p_decade,dCCSD_p_decade,hts,HeightInterval))
 # df$z[df$z<0.005]<-NA
 
-p <-ggplot(df,aes(x=x,y=y,fill=z))+
+p <-ggplot(df_H,aes(x=x,y=y,fill=z))+
   geom_tile() + #height=1.1,width=1.1) + 
-#  scale_fill_viridis(name="Hazard Probability",option ="C",begin=0.25,end=0.75)
-   scale_fill_gradientn(colours=c("blue","white","red"),values=c(0,0.1,1))
-#p <-p + scale_y_continuous(trans = "reverse", breaks = unique(df$y))
+   scale_fill_gradientn(name="Hazard Probability",colours=c("blue","white","red"),values=c(0,0.1,1))
+p <-p + scale_y_continuous(breaks =seq(0,maxHeight,5))
 p <-p + scale_x_continuous(breaks =seq(0,nYrs,10))
 p <-p + theme_minimal(base_size = 8)
-p <-p + labs(title= "Hazard probability", x="Year", y="River height")
+p <-p + labs(title= "Hazard probability", x="Year", y="Instantaneous water flow")
 p <-p + theme(legend.position = "right")+
   theme(plot.title=element_text(size = 14))+
   theme(axis.text.y=element_text(size=6)) +
@@ -91,16 +102,153 @@ p <-p + theme(legend.position = "right")+
   theme(axis.text=element_text(size=7))+
   theme(legend.title=element_text(size=8))+
   theme(legend.text=element_text(size=6))
-#  removeGrid()#ggExtra
  p
+#ggsave("HazardProbability.pdf", p)
 ```
   
 ### Exposure    
   
-
+Exposure relates to the degree to which assets, services or some such (collectively termed 'objects') are exposed when a level of hazard is reached.  In the catchment example, exposure may be considered to be the topographic contour of the water level in a place (often termed 'river height').  In this case, exposure can be moderated by trapping the water upstream in dams and releasing it slowly, modifying water retention in the landscape, and/or protecting assets via levees.  The first part of exposure is, consequently, the probability of an area being exposed after moderation of the hazard.  For governance, the second part of exposure is critical which is the accumulated value of the objects exposed to the hazard.  Note, partial control of hazards (dams and levees) can yield sudden increases in exposure as events increase in their magnitude beyond the protection of those constructions.  In terms of adaptation, costs of adding to such controls may also not be linearly related to the magnitude of reduction in hazard.  For example, the cost of increasing the height of a levee is proportional to the volume of materials and construction required rather than the height.   
     
+The distribution and value of objects will change over time.  For example, the number of dwellings will likely increase in popular areas.  As part of an adaptation strategy, dwellings may be removed from flood-prone areas.  
+  
+```{r Exposure, fig.cap="xxx", echo=FALSE}
+# function returns a relevant metric given a maximum river height
+fMetricGivenRiverHeight<-function(h    # the height of the river
+                                 ,hts  # vector of river heights
+                                 ,df   # df (Group, Height, Value)
+                                 ,Levee=NULL
+                                 ,Vuln=NULL
+                                 ,doLevee   =FALSE    # logical - add levee into calculations of proportion exposed
+                                 ,doVuln    =FALSE
+    ){
+    hts<-hts[hts<=h]
+    htValue<-unlist(lapply(hts,function(h,df){sum(df[df$Height==h,"Value"])},df))
+    TotalValue<-sum(df$Value)
+    if(doLevee){
+        if(h<=Levee$MaxHt) {
+        df$Value[df$Height>=Levee$MinHt & df$Height<=Levee$MaxHt &
+                        df$Group==Levee$Group]<-(1-Levee$pcGrp)*df$Value[df$Height>=Levee$MinHt &
+                                                                                     df$Height<=Levee$MaxHt &
+                                                                                     df$Group==Levee$Group]
+        htValue<-unlist(lapply(hts[hts<=h],function(h,df){sum(df[df$Height==h,"Value"])},df))
+        }
+    }
+    if(doVuln){
+      V<-((h-hts)-Vuln$htV0)/(Vuln$htV1-Vuln$htV0)
+      V[V<0]<-0
+      V[V>1]<-1
+      htValue<-htValue*V
+    }
+    return(data.frame(Height=h,Metric=sum(htValue)/TotalValue))
+
+} # end function
+
+
+
+npdf<-function(lmn,lsd,rmn,rsd,q){
+  lpd<-dnorm(q[q<lmn],lmn,lsd)/dnorm(lmn,lmn,lsd)
+  rpd<-dnorm(q[q>rmn],rmn,rsd)/dnorm(rmn,rmn,rsd)
+  cpd<-q[q>=lmn & q<=rmn]^0
+  pd<-c(lpd,cpd,rpd)
+  return(pd/max(pd))
+}
+
+seGrp1<-npdf(lmn=10,lsd=2,rmn=12.5,rsd=5,q=hts)*2
+seGrp2<-npdf(lmn= 8,lsd=5,rmn=9,rsd=3,q=hts)*0.5
+seGrp3<-npdf(lmn=15,lsd=1,rmn=22,rsd=3,q=hts)
+
+df_grps<-data.frame(Group=do.call(c,lapply(c(1:3),function(g,h){rep(g,length(h))},hts)),Height=rep(hts,3),Value=c(seGrp1,seGrp2,seGrp3))
+p <- ggplot(df_grps)
+p<- p + geom_col(aes(x=Height, y=Value, fill=Group))
+p<- p+  coord_flip() # make it horizontal
+p
+
+#ggsave("Exposure.pdf", p)
+
+
+# building levee 5m high at 10m height contour around a percentage of Group 1 (constant across height)
+# note that cumulative exposed value is less the levee up to height of levee, 
+# after which it returns to absent levee values 
+Levee<-list(MinHt = 10
+           ,MaxHt = 15
+           ,Group = 1
+           ,pcGrp = 1  # percentage protected by levee
+           ) # end list
+
+dfcum<-do.call(rbind,lapply(hts,fMetricGivenRiverHeight,hts,df_grps))  
+dfcum_levee<-do.call(rbind,lapply(hts,fMetricGivenRiverHeight,hts,df_grps,Levee=Levee,doLevee=TRUE))  
+
+
+plot(dfcum$Metric,dfcum$Height,type="l")
+lines(dfcum_levee$Metric,dfcum_levee$Height,col="red")
+
+```
+
+### Vulnerability  
+    
+Impacts on objects are determined by their vulnerability once exposed.  In the flood example, vulnerability is the degree to which dwellings would be rendered uninhabitable. A dwelling built directly on the ground would remain habitable if the depth of the flood at the dwelling was less than a meter up the wall of the house.  Above three meters and a single story house would be difficult to salvage.  Adaptations to reduce vulnerability may be to have a ground floor able to withstand a river flowing through it or to modify the dwelling in such a way that complete inundation would not diminish potential for salvage.  In this example, vulnerability changes linearly from 0 if the water is lapping at the door to 1 (loss of house) if the depth of the water at the house exceeds 5m.  The cumulative loss of value to the community of a flood (impact) is the product of vulnerability by value of the dwellings in each group exposed to the flood.  The risk to the community is the probability of attaining a river height multiplied by the impact.  
+
+Figure - impact
+
+```{r Impact, fig.cap="xxx",echo=FALSE}
+Vuln<-list( htV0 = 0   # meters above a river height
+           ,htV1 = 5)
+
+dfcum_vuln<-do.call(rbind,lapply(hts,fMetricGivenRiverHeight,hts,df_grps,Levee=Levee,Vuln=Vuln,doLevee=TRUE,doVuln=TRUE))
+Vuln<-list( htV0 = 2   # meters above a river height
+           ,htV1 = 7)
+dfcum_vuln_stilts<-do.call(rbind,lapply(hts,fMetricGivenRiverHeight,hts,df_grps,Levee=Levee,Vuln=Vuln,doLevee=TRUE,doVuln=TRUE))
+plot(dfcum_vuln$Metric,dfcum_vuln$Height,type="l")
+lines(dfcum_vuln_stilts$Metric,dfcum_vuln_stilts$Height,col="red")
+
+```
+Risk is then the impact multiplied by the probability of an event.
+
+```{r Risk,fig.cap="xxx",echo=FALSE}
+dfVulnNoLevee<-do.call(rbind,lapply(hts,fMetricGivenRiverHeight,hts,df_grps,Vuln=Vuln,doVuln=TRUE))
+df_risk<-df_H
+df_risk$z<-apply(as.matrix(df_H),1,function(r,i){return(i[i$Height==r[2],"Metric"]*r[4])},dfVulnNoLevee) # note using the probability for the discrete event and not the cumulative probability
+
+
+p <-ggplot(df_risk,aes(x=x,y=y,fill=z))+
+  geom_tile() + #height=1.1,width=1.1) + 
+   scale_fill_gradientn(name="Risk",colours=c("blue","white","red"),values=c(0,0.1,1))
+p <-p + scale_y_continuous(breaks =seq(0,maxHeight,5))
+p <-p + scale_x_continuous(breaks =seq(0,nYrs,10))
+p <-p + theme_minimal(base_size = 8)
+p <-p + labs(title= "Risk", x="Year", y="Risk (probability x impact)")
+p <-p + theme(legend.position = "right")+
+  theme(plot.title=element_text(size = 14))+
+  theme(axis.text.y=element_text(size=6)) +
+  theme(strip.background = element_rect(colour="white"))+
+  theme(plot.title=element_text(hjust=0))+
+  theme(axis.ticks=element_blank())+
+  theme(axis.text=element_text(size=7))+
+  theme(legend.title=element_text(size=8))+
+  theme(legend.text=element_text(size=6))
+ p
+#ggsave("Risk.pdf", p)
+
+```
+  
 ## Reframing risk management as costs  
   
+Plots of risk over time given different flood levels is a coarse, heuristic tool for mapping and/or testing adaptation options.  Decision-makers rely on simplified metrics.  A suitable metric in the example here is the average annual cost of recovery given the risk profile.  Over many years, the probability of hazards would be expected to play out as relative frequencies of events.  If the cost of recovery over many years is budgetted for as an average annual cost then it can be used for comparative purposes as to whether adaptation strategies are affordable and appropriate.  
+  
+The risk example above is recalculated as an average annual cost of recovery, which is the carriage of residual risk.  
+
+```{r AverageAnnualRecoveryCost}  
+
+Yrs<-unique(df_risk$x)
+SumProbs<-unlist(lapply(Yrs,function(y,h){sum(h[h$x==y,"pEvent"])},df_H))
+plot(Yrs,SumProbs)
+
+AARC<-unlist(lapply(seq(1,length(Yrs),1),function(i,y,r,denom){sum(r[r$x==y[i],"z"])/denom[i]},Yrs,df_risk,SumProbs))
+plot(Yrs,AARC)
+
+```
+
   
 ### Integrating across risks arising from a single hazard  
   

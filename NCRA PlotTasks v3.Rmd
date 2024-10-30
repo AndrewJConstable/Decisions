@@ -44,17 +44,18 @@ fnPointTransTangent<-function(x,y,q,acs,d){  # x = original X, y = original Y
                  return(data.frame(x=x+xprime,y=y+yprime))
                  }
 
-fnPointTransAxis<-function(x,y,q,acs,d){  # x = original X, y = original Y
+fnPointTransAxis<-function(x,y,acs,d){  # x = original X, y = original Y
                                          # q = quarter applicable to transformation
                                          # acs = cosine & degrees 
                                          # d = distance along axis of angle
-                 xprime<-ifelse(q==1,d*acs[1,"cos"],d*acs[1,"sin"])
-                 yprime<-ifelse(q==1,d*acs[1,"sin"],d*acs[1,"cos"])
+                 xprime<-d*acs[1,"cos"] #,d*acs[1,"sin"])
+                 yprime<-d*acs[1,"sin"] #,d*acs[1,"cos"])
                  return(data.frame(x=x+xprime,y=y+yprime))
                  }
 
 plotNet<-function(eT,targetNode=NULL,Zero.rm=TRUE,vSize=40,aSize=0.5,eSize=0.5,NfillCols=NULL,NtextCols=NULL,Ecols=NULL
-                  ,labelVertices="Short",VertexLabelLong=NULL,vLabelLongPosRel=0.2,vLabelLineOffset=1,ScalePlotForLabels=1){
+                  ,labelVertices="Short",VertexLabelLong=NULL,vLabelLongPosRel=0.2,vLabelLineOffset=1,ScalePlotForLabels=1
+                  ,LabelAxisExtend=0.2,TextLineSpace=0.05){
 
 # create data.frame from edge matrix - from, to, pressure
 netWork<-fnNetFromMat(eT)  
@@ -91,23 +92,46 @@ if(labelVertices=="Long"){ # add labels outside vertices
       relLabelPos<-vLabelLongPosRel
       x = netLayout[,1]
       y = netLayout[,2]
+
 #create vector of angles for text based on number of nodes (flipping the orientation of the words half way around so none appear upside down)
-angle = ifelse(atan(-(netLayout[,1]/netLayout[,2]))*(180/pi) < 0,  90 + atan(-(netLayout[,1]/netLayout[,2]))*(180/pi), 270 + atan(-netLayout[,1]/netLayout[,2])*(180/pi))
+angleText<- ifelse(atan(-(netLayout[,1]/netLayout[,2]))*(180/pi) < 0,  90 + atan(-(netLayout[,1]/netLayout[,2]))*(180/pi), 270 + atan(-netLayout[,1]/netLayout[,2])*(180/pi))
 
-# note igraph plots anti-clockwise whereas trigonometry formula are clockwise - both from horizontal
-angleCW=1-angle/360
-angleCW[angleCW>=360]<-angleCW[angleCW>=360]-360
+# restore angles clockwise from horizontal
+angleNodeAxis<-angleText
+q2<-netLayout[,1]<0 & netLayout[,2]>0
+angleNodeAxis[q2]<-angleNodeAxis[q2]-180
+q3<-netLayout[,1]<0 & netLayout[,2]<0
+angleNodeAxis[q3]<-angleNodeAxis[q3]+180
 
-quartr<-floor(angleCW/90)+1
-quartr[quartr>2]<-quartr[quartr>2]-2
-angle_cos_sin<-data.frame(angle=angle,cos=cos(angle/180*pi),sin=sin(angle/180*pi))
+angle_cos_sin<-data.frame(angle=angleNodeAxis,cos=cos(angleNodeAxis/180*pi),sin=sin(angleNodeAxis/180*pi))
+# print(cbind(nodes,netLayout,angleText,angle_cos_sin))
 
 #Apply the text labels with a loop with angle as srt
 
 for (i in 1:nrow(netLayout)) {
-  Pt_xy<-fnPointTransAxis(x=netLayout[i,1],y=netLayout[i,2],q=quartr[i],acs=angle_cos_sin[i,],0.2)
-  adjX<-ifelse(Pt_xy[1,"x"]>=0,0,1); adjY<-0.5
-  text(x=Pt_xy[1,"x"], y=Pt_xy[1,"y"], labels=nodeLongLabel[[i]][1], adj=c(adjX,0.5), pos=NULL, cex=0.7, col="black", srt=angle[i], xpd=T)
+  Pt_xy<-fnPointTransAxis(x=netLayout[i,1],y=netLayout[i,2],acs=angle_cos_sin[i,],d=LabelAxisExtend)
+  adjX<-ifelse(netLayout[i,1]>=0,0,1); adjY<-0.5
+  
+  StepDirections<-matrix(c( 1,-1
+                          ,-1,-1
+                          , 1,-1
+                          ,-1,-1),ncol=2,byrow=TRUE,dimnames=list(NULL,c("x","y")))
+  
+  nLines<-length(nodeLongLabel[[i]])
+  tAngle<-(angleNodeAxis[i]%%90)/180*pi
+  quad<-(floor(angleNodeAxis[i]/90)+1)
+  sd<-StepDirections[quad,]
+  
+  if(quad==1 | quad==3) trig<-c(sin(tAngle),cos(tAngle)) else trig<-c(cos(tAngle),sin(tAngle))
+  oX<-Pt_xy["x"]-(sd["x"]*TextLineSpace*(nLines-1)/2)*trig[1]
+  oY<-Pt_xy["y"]-(sd["y"]*TextLineSpace*(nLines-1)/2)*trig[2]
+  for(j in 1:nLines){
+    
+  tX<-oX+sd["x"]*TextLineSpace*(j-1)*trig[1]
+  tY<-oY+sd["y"]*TextLineSpace*(j-1)*trig[2]
+  
+  text(x=tX, y=tY, labels=nodeLongLabel[[i]][j], adj=c(adjX,0.5), pos=NULL, cex=0.9, col=nodeTextColours[i], srt=angleText[i], xpd=T)
+  } # end j  
 
      } # end print labels
 } # end long labels
@@ -143,13 +167,15 @@ ScalePlotForLabels<-0.6
 vLabelLineOffset<-0.1
 
 plotNet(eTask1_1,aSize=ArrowSize,NfillCols=EdgeCols,NtextCols=EdgeCols
-        ,Ecols=EdgeCols,labelVertices=labelVertices,VertexLabelLong=NodeLabelsLong,vLabelLongPosRel=vLabelLongPosRel,vLabelLineOffset=vLabelLineOffset,ScalePlotForLabels=ScalePlotForLabels)
+        ,Ecols=EdgeCols,labelVertices=labelVertices,VertexLabelLong=NodeLabelsLong,vLabelLongPosRel=vLabelLongPosRel,vLabelLineOffset=vLabelLineOffset,ScalePlotForLabels=ScalePlotForLabels,TextLineSpace=0.15)
 
 Nodes<-eTask1_1[,1]
 
 
 res<-sapply(Nodes,function(n,eT){
-plotNet(eT,targetNode=n,aSize=ArrowSize,NfillCols=EdgeCols,NtextCols=EdgeCols, Ecols=EdgeCols)
+#plotNet(eT,targetNode=n,aSize=ArrowSize,NfillCols=EdgeCols,NtextCols=EdgeCols, Ecols=EdgeCols)
+plotNet(eT,targetNode=n,aSize=ArrowSize,NfillCols=EdgeCols,NtextCols=EdgeCols
+        ,Ecols=EdgeCols,labelVertices=labelVertices,VertexLabelLong=NodeLabelsLong,vLabelLongPosRel=vLabelLongPosRel,vLabelLineOffset=vLabelLineOffset,ScalePlotForLabels=ScalePlotForLabels,TextLineSpace=0.15)
 },eTask1_1)
 
 ```
@@ -163,12 +189,16 @@ Opportunity Statements Triggered by a Decision
 eTask1_2 <- read.csv("NCRA Data Working File for Modelling(Task 1) 1.2.csv", header=T, as.is=T)
 
 ArrowSize<-0.5
-plotNet(eTask1_2,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+#plotNet(eTask1_2,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+plotNet(eTask1_2,aSize=ArrowSize,NfillCols=EdgeCols,NtextCols=EdgeCols
+        ,Ecols=EdgeCols,labelVertices=labelVertices,VertexLabelLong=NodeLabelsLong,vLabelLongPosRel=vLabelLongPosRel,vLabelLineOffset=vLabelLineOffset,ScalePlotForLabels=ScalePlotForLabels,TextLineSpace=0.15)
 
 Nodes<-eTask1_2[,1]
 
 res<-sapply(Nodes,function(n,eT){
-plotNet(eT,targetNode=n,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+#plotNet(eT,targetNode=n,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+plotNet(eT,targetNode=n,aSize=ArrowSize,NfillCols=EdgeCols,NtextCols=EdgeCols
+        ,Ecols=EdgeCols,labelVertices=labelVertices,VertexLabelLong=NodeLabelsLong,vLabelLongPosRel=vLabelLongPosRel,vLabelLineOffset=vLabelLineOffset,ScalePlotForLabels=ScalePlotForLabels,TextLineSpace=0.15)
 },eTask1_2)
 
 ```

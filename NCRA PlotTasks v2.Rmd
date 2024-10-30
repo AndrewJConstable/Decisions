@@ -1,0 +1,149 @@
+---
+title: "NCRA Decision Impacts"
+author: "Andrew Constable"
+date: "2024-09-23"
+output: html_document
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library("igraph")
+
+# adjustable arrow heads
+source("igraphplot2.R")
+environment(plot.igraph2) <- asNamespace('igraph')
+environment(igraph.Arrows2) <- asNamespace('igraph')
+
+# functions
+
+fnNetFromMat<-function(eT,Zero.rm=TRUE){
+  nodes<-eT[,1]
+  row.names(eT)<-nodes
+  eT<-eT[,-1] # lose column of names
+
+  edges<-do.call(rbind,
+            lapply(row.names(eT),function(r,m){
+                r1<-as.vector(unlist(m[r,]))
+                if(Zero.rm) p<-which(!is.na(r1) & r1!=0) else p<-which(!is.na(r1))
+                c1<-colnames(m)[p]
+                res<-data.frame(from=rep(r,length(c1)),to=c1,pressure=r1[p])
+                return(res)
+                },eT))
+  return(list(nodes=nodes,edges=edges))
+   }
+
+plotNet<-function(eT,targetNode=NULL,Zero.rm=TRUE,vSize=40,aSize=0.5,eSize=0.5,NfillCols=NULL,NtextCols=NULL,Ecols=NULL){
+
+# Examine the data:
+
+# create data.frame from edge matrix - from, to, pressure
+netWork<-fnNetFromMat(eT)  
+edges<-netWork$edges
+nodes<-netWork$nodes
+
+nodeFillColours<-unlist(sapply(nodes,function(n,Nc){return(if(is.null(Nc)) NA else Nc[[n]] )},NfillCols))
+nodeTextColours<-unlist(sapply(nodes,function(n,Nc){return(if(is.null(Nc)) "black" else Nc[[n]] )},NtextCols))
+
+if(!is.null(targetNode)){
+ edges<-edges[edges[,1]==targetNode | edges[,2]==targetNode,]  
+}
+edgeColours<-unlist(sapply(edges[,1],function(n,Ec){return(if(is.null(Ec)) "black" else Ec[[n]])},Ecols))
+
+net <- graph_from_data_frame(d=edges, vertices=nodes, directed=T) 
+
+edgeSize<-edges[,"pressure"]
+plot(net,layout=layout_in_circle,edge.curved=0.2,edge.width=edgeSize*eSize,vertex.size=vSize,edge.arrow.size=aSize,vertex.color=nodeFillColours,vertex.frame.color= nodeTextColours,vertex.frame.width=1.5,vertex.label.color=nodeTextColours,edge.color=edgeColours )
+} # end plot eT
+
+```
+\newpage
+## Task 1  
+  
+### Flow of decisions that result in impacts between systems  
+  
+Impact Statements Triggered by a Decision  
+  
+```{r Task-1,echo=FALSE,eval=TRUE}
+
+eTask1_1 <- read.csv("NCRA Data Working File for Modelling(Task 1) 1.1.csv", header=T, as.is=T)
+NodeCols<-list(ETF = "#FFCC00",DNS = "#ccff00", CandS = "#80e5ff", PIF="#ffaaee", NE = "#e9afaf", IBE = "#cccccc", HSS = "#afdde9")
+
+EdgeCols<-list(ETF = "#ff6600",DNS = "#668000", CandS = "blue", PIF="#ff00cc", NE = "#501616", IBE = "#1a1a1a", HSS = "#164450")
+
+
+ArrowSize<-0.5
+plotNet(eTask1_1,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+
+Nodes<-eTask1_1[,1]
+
+res<-sapply(Nodes,function(n,eT){
+plotNet(eT,targetNode=n,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+},eTask1_1)
+
+```
+
+### Flow of decisions resulting in opportunities between systems  
+  
+Opportunity Statements Triggered by a Decision  
+  
+```{r Task-2,echo=FALSE,eval=TRUE}
+
+eTask1_2 <- read.csv("NCRA Data Working File for Modelling(Task 1) 1.2.csv", header=T, as.is=T)
+
+ArrowSize<-0.5
+plotNet(eTask1_2,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+
+Nodes<-eTask1_2[,1]
+
+res<-sapply(Nodes,function(n,eT){
+plotNet(eT,targetNode=n,aSize=ArrowSize,NtextCols=EdgeCols, Ecols=EdgeCols)
+},eTask1_2)
+
+```
+\newpage
+  
+### Flow of decisions resulting in impacts between scales  
+Impact Statements Triggered by a Decision At What Level  
+  
+```{r Task-3,echo=FALSE,eval=TRUE}
+
+eTask1_3 <- read.csv("NCRA Data Working File for Modelling(Task 1) 1.3.csv", header=T, as.is=T)
+
+plotNet(eTask1_3,aSize=0.5,Zero.rm=FALSE)
+
+```
+  
+### Flow of decisions resulting in opportunities between scales  
+Opportunity Statements Triggered by a Decision At What Level  
+  
+```{r Task-4,echo=FALSE,eval=TRUE}
+
+eTask1_4 <- read.csv("NCRA Data Working File for Modelling(Task 1) 1.4.csv", header=T, as.is=T)
+
+plotNet(eTask1_4,aSize=0.3,eSize=0.2,Zero.rm=FALSE)
+```
+
+
+## Sankey plot   
+
+```{r Sankey,eval=TRUE,echo=FALSE}
+nodes<-read.csv("Sankey nodes.csv", header=T, as.is=T)
+net_1_2<-fnNetFromMat(read.csv("Sankey 1-2.csv", header=T, as.is=T))$edges  
+net_2_3<-fnNetFromMat(read.csv("Sankey 2-3.csv", header=T, as.is=T))$edges  
+net_3_4<-fnNetFromMat(read.csv("Sankey 3-4.csv", header=T, as.is=T))$edges  
+links<-rbind(net_1_2,net_2_3,net_3_4)
+
+# add cols to links with numeric value of nodes
+# note source and target need to be zero indexed (hence the inclusion of '-1')
+
+links$source<-as.vector(unlist(sapply(links[,1],function(s,n){which(n==s)},nodes[,1])))-1
+links$target<-as.vector(unlist(sapply(links[,2],function(t,n){which(n==t)},nodes[,1])))-1
+
+library(networkD3)
+sankeyNetwork(Links = links, Nodes = nodes, Source = "source",Target = "target", Value = "pressure", NodeID = "Name"
+                       , fontSize = 10, nodeWidth = 20, iterations=0)
+
+```

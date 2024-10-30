@@ -1,0 +1,108 @@
+---
+title: "Network visualisation & analysis"
+author: "Andrew Constable"
+date: "2024-09-06"
+output: pdf_document
+bibliography: Network_refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction  
+  
+This document provides the methodology for developing a network model from base coding in R as well as from an Excel file of relevant interaction matrices.  
+  
+## Visualisation  
+  
+Visualisation methods are derived from Ognyanova [-@Ognyanova2023_RN20849].   
+  
+### Example  
+  
+```{r EGinput, echo=FALSE, eval=TRUE}
+library("igraph")
+
+
+nEG <- read.csv("Model inputs - test - nodes.csv", header=T, as.is=T)
+mEG <- read.csv("Model inputs - test - edges -g.csv", header=T, as.is=T)
+
+# Examine the data:
+head(nEG)
+head(mEG)
+row.names(mEG)<-as.vector(mEG[,1])
+mEG<-mEG[,-1] # lose column of names
+
+# winnow nodes and edges to only those nodes that have interactions with other nodes
+
+selfEdge<-(-1) 
+
+res<-as.vector(which((apply(abs(mEG),1,sum) + apply(abs(mEG),2,sum))==2*abs(selfEdge)))
+rEGn<-nEG[-res,]
+rEGe<-mEG[-res,-res]
+
+# create data.frame from edge matrix - from, to, pressure
+
+edges<-do.call(rbind,
+            lapply(row.names(rEGe),function(r,m){
+                r1<-as.vector(unlist(m[r,]))
+                p<-which(r1!=0)
+                c1<-colnames(m)[p]
+                res<-data.frame(from=rep(r,length(c1)),to=c1,pressure=r1[p])
+                return(res)
+                },rEGe))
+nodes<-rEGn
+
+# Converting the data to an igraph object:
+# The graph_from_data_frame() function takes two data frames: 'd' and 'vertices'.
+# 'd' describes the edges of the network - it should start with two columns 
+# containing the source and target node IDs for each network tie.
+# 'vertices' should start with a column of node IDs.
+# Any additional columns in either data frame are interpreted as attributes.
+
+net <- graph_from_data_frame(d=edges, vertices=nodes, directed=T) 
+
+# Examine the resulting object:
+class(net)
+net 
+
+tkplot(net)
+
+```
+
+## Perturbation analysis  
+  
+### Qpress installation and application  
+  
+Qpress is a qualitative network analytical package [@MelbourneThomas2012_RN770] maintained by Simon Wotherspoon on Github (https://github.com/SWotherspoon/QPress?tab=readme-ov-file#readme).  Installation and access to vignettes are detailed in the readme file.  Latest version is 2022.  
+  
+```{r QpressInstall, echo=FALSE, include=FALSE, eval=FALSE}
+# from the readme file
+remotes::install_github("SWotherspoon/QPress", build_vignettes = TRUE)
+library(QPress)
+# help:   ?`QPress-package`
+# goto index
+
+vignette("Snowshoe")
+vignette("Mesocosm")
+
+tqp<-model.dia("Test 1.dia")
+
+# dia line options for negative influence
+#    circle = 8
+#    diamond = 5
+# dia line options for positive influence
+#    line arrow head = 1
+#    solid arrow head = 22
+
+# dia node shape
+#  ellipse = "Flowchart - Ellipse"
+#  rectangle = "Flowchart - Box"
+#  rectangle with rounded corners = "Flowchart - Terminal"
+
+
+
+```
+
+## References  
+  
